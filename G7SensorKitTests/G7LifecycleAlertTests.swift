@@ -104,6 +104,16 @@ class G7LifecycleAlertScheduleTests: XCTestCase {
         }
         XCTAssertEqual(G7LifecycleAlert.sensorFailed.interruptionLevel, .critical)
     }
+
+    func testIssuableAlertsMatchWhatIsIssued() {
+        let declared = Dictionary(uniqueKeysWithValues: G7CGMManager.issuableAlerts.map { ($0.identifier, $0.interruptionLevel) })
+        for alert in G7LifecycleAlert.issuable {
+            XCTAssertEqual(declared[alert.rawValue], alert.alert(managerIdentifier: "G7CGMManager").interruptionLevel)
+        }
+        XCTAssertNil(declared[G7LifecycleAlert.signalLoss.rawValue], "no longer raised")
+        XCTAssertEqual(declared[G7CGMManager.watchCodeNeededAlertIdentifier], .timeSensitive)
+        XCTAssertEqual(declared.count, G7LifecycleAlert.issuable.count + 1)
+    }
 }
 
 @MainActor

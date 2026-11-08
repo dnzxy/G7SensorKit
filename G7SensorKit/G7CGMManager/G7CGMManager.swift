@@ -506,6 +506,22 @@ public class G7CGMManager: CGMManager {
 
     public let pluginIdentifier: String = "G7CGMManager"
 
+    /// Asks for a new sensor's pairing code so the watch can keep reading it.
+    static let watchCodeNeededAlertIdentifier: Alert.AlertIdentifier = "directRead.codeNeeded"
+    static let watchCodeNeededInterruptionLevel: Alert.InterruptionLevel = .timeSensitive
+
+    public static var issuableAlerts: [IssuableAlert] {
+        G7LifecycleAlert.issuable.map {
+            IssuableAlert(identifier: $0.rawValue, interruptionLevel: $0.interruptionLevel, title: $0.title)
+        } + [
+            IssuableAlert(
+                identifier: watchCodeNeededAlertIdentifier,
+                interruptionLevel: watchCodeNeededInterruptionLevel,
+                title: LocalizedString("New Sensor Pairing Code", comment: "Alert title asking for a new G7's pairing code for the watch, as listed in alert settings")
+            )
+        ]
+    }
+
     /// The model of the sensor in use, once one is known. G7 until then; the
     /// three models share one plugin and one protocol.
     public var sensorModel: G7SensorModel {
@@ -853,8 +869,9 @@ extension G7CGMManager: G7SensorDelegate {
                     title: String(format: LocalizedString("New Sensor %1$@", comment: "Alert title asking for a new G7's pairing code for the watch (1: sensor name)"), name),
                     body: LocalizedString("Enter its pairing code in the Dexcom G7 settings so the watch can read it without your phone. The code is shown in the Dexcom app.", comment: "Alert body asking for a new G7's pairing code for the watch"),
                     acknowledgeActionButtonLabel: LocalizedString("OK", comment: "Alert acknowledgment button label"))
-                let alert = Alert(identifier: Alert.Identifier(managerIdentifier: pluginIdentifier, alertIdentifier: "directRead.codeNeeded"),
-                                  foregroundContent: content, backgroundContent: content, trigger: .immediate)
+                let alert = Alert(identifier: Alert.Identifier(managerIdentifier: pluginIdentifier, alertIdentifier: Self.watchCodeNeededAlertIdentifier),
+                                  foregroundContent: content, backgroundContent: content, trigger: .immediate,
+                                  interruptionLevel: Self.watchCodeNeededInterruptionLevel)
                 delegate.notify { delegate in
                     Task { await delegate?.issueAlert(alert) }
                 }
