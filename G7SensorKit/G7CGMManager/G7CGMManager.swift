@@ -510,11 +510,11 @@ public class G7CGMManager: CGMManager {
     static let watchCodeNeededAlertIdentifier: Alert.AlertIdentifier = "directRead.codeNeeded"
     static let watchCodeNeededInterruptionLevel: Alert.InterruptionLevel = .timeSensitive
 
-    public static var issuableAlerts: [IssuableAlert] {
-        G7LifecycleAlert.issuable.map {
-            IssuableAlert(identifier: $0.rawValue, interruptionLevel: $0.interruptionLevel, title: $0.title)
+    public static var alertCatalog: [AlertCatalogEntry] {
+        G7LifecycleAlert.cataloged.map {
+            AlertCatalogEntry(identifier: $0.rawValue, interruptionLevel: $0.interruptionLevel, title: $0.title)
         } + [
-            IssuableAlert(
+            AlertCatalogEntry(
                 identifier: watchCodeNeededAlertIdentifier,
                 interruptionLevel: watchCodeNeededInterruptionLevel,
                 title: LocalizedString("New Sensor Pairing Code", comment: "Alert title asking for a new G7's pairing code for the watch, as listed in alert settings")

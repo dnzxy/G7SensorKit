@@ -44,7 +44,7 @@ enum G7LifecycleAlert: String, CaseIterable {
     static let sessionTimed: [G7LifecycleAlert] = [.sensorExpiringSoon, .sensorExpiringImminently, .sensorExpired, .sessionEnded]
 
     /// The alerts this build can raise; `signalLoss` is only ever retracted.
-    static let issuable: [G7LifecycleAlert] = allCases.filter { $0 != .signalLoss }
+    static let cataloged: [G7LifecycleAlert] = allCases.filter { $0 != .signalLoss }
 
     func identifier(managerIdentifier: String) -> Alert.Identifier {
         Alert.Identifier(managerIdentifier: managerIdentifier, alertIdentifier: rawValue)
