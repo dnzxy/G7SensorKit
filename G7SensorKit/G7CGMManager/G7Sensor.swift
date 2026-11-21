@@ -216,6 +216,15 @@ public final class G7Sensor: G7BluetoothManagerDelegate {
 
     private let lockedCredentials: Locked<G7SensorCredentials>
 
+    /// Off: a connection without a key doesn't start pairing. Pairing can end in the system's Bluetooth
+    /// pairing request, which a watch app can only show while it is in front.
+    private let lockedPairingAllowed = Locked(true)
+
+    public var pairingAllowed: Bool {
+        get { lockedPairingAllowed.value }
+        set { lockedPairingAllowed.value = newValue }
+    }
+
     var credentials: G7SensorCredentials {
         lockedCredentials.value
     }
@@ -540,6 +549,11 @@ public final class G7Sensor: G7BluetoothManagerDelegate {
             // whatever Dexcom device is in range and fail every time. Wait for
             // the user to pair instead.
             log.error("Not authenticating: no shared key or pairing code")
+            return
+        }
+
+        guard credentials.sharedKey != nil || lockedPairingAllowed.value else {
+            logToDevice("Not pairing now: it waits until the app is open, for the system pairing request", type: .connection)
             return
         }
 

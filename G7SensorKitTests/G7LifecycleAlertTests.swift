@@ -252,6 +252,33 @@ class G7LifecycleAlertManagerTests: XCTestCase {
         XCTAssertTrue(recorder.retracted.contains { $0.alertIdentifier == G7LifecycleAlert.connectionRefused.rawValue })
     }
 
+    func testAStaleBluetoothBondRaisesOnceAndClearsOnReading() {
+        var state = G7CGMManagerState()
+        state.sessionMode = .direct
+        state.sensorID = "DXCM99"
+        state.activatedAt = Date(timeIntervalSinceNow: -3600)
+        let manager = makeManager(state: state)
+        let encryption = NSError(domain: CBErrorDomain, code: CBError.Code.encryptionTimedOut.rawValue)
+
+        manager.sensor(manager.sensor, didError: encryption)
+        manager.sensor(manager.sensor, didError: encryption)
+        manager.sensor(manager.sensor, didError: NSError(domain: CBErrorDomain, code: CBError.Code.connectionTimeout.rawValue))
+        settle()
+        XCTAssertEqual(recorder.issued.filter { $0.identifier.alertIdentifier == G7LifecycleAlert.bluetoothBondStale.rawValue }.count, 1)
+        XCTAssertFalse(G7CGMManager.isStaleBond(NSError(domain: CBErrorDomain, code: CBError.Code.connectionTimeout.rawValue)))
+
+        manager.sensor(manager.sensor, didRead: okReading)
+        settle()
+        XCTAssertTrue(recorder.retracted.contains { $0.alertIdentifier == G7LifecycleAlert.bluetoothBondStale.rawValue })
+    }
+
+    func testPairingIsAllowedUnlessTheHostSaysOtherwise() {
+        let manager = makeManager(state: G7CGMManagerState())
+        XCTAssertTrue(manager.pairingAllowed)
+        manager.pairingAllowed = false
+        XCTAssertFalse(manager.sensor.pairingAllowed)
+    }
+
     /// LibreLoop #13: alerts left standing when the CGM is deleted are
     /// replayed by Loop at every launch until acknowledged. Deleting must
     /// retract every alert this manager can issue, and must do so before the

@@ -6,6 +6,7 @@
 //  Copyright © 2022 LoopKit Authors. All rights reserved.
 //
 
+import CoreBluetooth
 import Foundation
 import HealthKit
 import LoopKit
@@ -78,6 +79,24 @@ public class G7CGMManager: CGMManager {
     private var didRetractLegacySignalLoss = false
     /// The unfinished-pairing alert is up; retracted at the next reading.
     private var pairingUnfinishedAlertPending = false
+    private var staleBondAlertPending = false
+
+    /// Off: a connection without a key doesn't start pairing. On by default; a watch app turns it on only
+    /// while it is in front, so the system's pairing request can show.
+    public var pairingAllowed: Bool {
+        get { sensor.pairingAllowed }
+        set { sensor.pairingAllowed = newValue }
+    }
+
+    /// The link failed to encrypt before any of our traffic: the system's bond for the sensor is stale.
+    /// Only forgetting the sensor in Settings › Bluetooth clears it.
+    static func isStaleBond(_ error: Error) -> Bool {
+        let error = error as NSError
+        return error.domain == CBErrorDomain && (
+            error.code == CBError.Code.encryptionTimedOut.rawValue ||
+                error.code == CBError.Code.peerRemovedPairingInformation.rawValue
+        )
+    }
 
     /// Sends readings to Dexcom Share while an account is signed in.
     private var shareUploader: G7ShareUploader?
@@ -1456,6 +1475,10 @@ extension G7CGMManager: G7SensorDelegate {
                 issueLifecycleAlert(.connectionRefused)
             }
         }
+        if Self.isStaleBond(error), !staleBondAlertPending {
+            staleBondAlertPending = true
+            issueLifecycleAlert(.bluetoothBondStale)
+        }
         logDeviceCommunication("Sensor error \(error)", type: .error)
     }
 
@@ -1466,6 +1489,10 @@ extension G7CGMManager: G7SensorDelegate {
                 state.lastAuthenticationFailureDate = nil
             }
             retractLifecycleAlert(.connectionRefused)
+        }
+        if staleBondAlertPending {
+            staleBondAlertPending = false
+            retractLifecycleAlert(.bluetoothBondStale)
         }
         if pairingUnfinishedAlertPending {
             pairingUnfinishedAlertPending = false
