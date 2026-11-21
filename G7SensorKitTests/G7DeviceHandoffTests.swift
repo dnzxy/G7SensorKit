@@ -93,6 +93,27 @@ final class G7DeviceHandoffTests: XCTestCase {
         XCTAssertFalse(makeManager(state: phoneState).state.configuredByAnotherController)
     }
 
+    func testAnAdoptOfTheSameSensorKeepsThisDevicesKeyAndHandle() {
+        let export = makeManager(state: phoneState).exportConfiguration().state
+        var watch = G7CGMManagerState.adopted(from: export)
+        watch.sharedKey = Data(repeating: 9, count: 16)
+        watch.peripheralIdentifier = UUID()
+        let local = makeManager(state: watch).localState
+
+        let again = G7CGMManagerState.adopted(from: export, localState: local)
+        XCTAssertEqual(again.sharedKey, watch.sharedKey, "a reconnect skips the key exchange")
+        XCTAssertEqual(again.peripheralIdentifier, watch.peripheralIdentifier)
+        XCTAssertEqual(again.displayType, .watch)
+
+        var otherSensor = phoneState
+        otherSensor.sensorID = "DXCM99"
+        let fresh = G7CGMManagerState.adopted(from: makeManager(state: otherSensor).exportConfiguration().state, localState: local)
+        XCTAssertNil(fresh.sharedKey, "another sensor pairs from scratch")
+        XCTAssertNil(fresh.peripheralIdentifier)
+
+        XCTAssertNil(makeManager(state: G7CGMManagerState.adopted(from: export)).localState, "nothing to keep before pairing")
+    }
+
     func testAnAdoptedManagerAsksTheSensorForItsVersion() {
         let state = G7CGMManagerState.adopted(from: makeManager(state: phoneState).exportConfiguration().state)
         let sensor = G7Sensor(mode: .direct, credentials: state.sensorCredentials, bluetoothManager: TestBluetoothManager())

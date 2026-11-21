@@ -295,7 +295,7 @@ public class G7CGMManager: CGMManager {
 
     /// DeviceConfigurationSharing: read the sensor another controller follows, directly.
     public required convenience init?(adopting configuration: SharedDeviceConfiguration, localState: [String: Any]?) {
-        let state = G7CGMManagerState.adopted(from: configuration.state)
+        let state = G7CGMManagerState.adopted(from: configuration.state, localState: localState)
         self.init(adopted: state, sensor: G7Sensor(mode: .direct, credentials: state.sensorCredentials,
                                                    displayType: state.displayType))
     }
@@ -1684,6 +1684,8 @@ extension G7CGMManager: DeviceConfigurationSharing {
 
     /// The user's Read on Apple Watch setting.
     public var isConfigurationSharingEnabled: Bool { isWatchDirectReadEnabled }
+
+    public var localState: [String: Any]? { state.localState }
 
 }
 

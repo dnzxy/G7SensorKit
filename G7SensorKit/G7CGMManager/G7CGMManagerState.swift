@@ -336,7 +336,18 @@ extension G7CGMManagerState {
     }
 
     /// Another controller's shared state as a manager of its own, reading directly.
-    static func adopted(from shared: RawValue) -> G7CGMManagerState {
+    /// This controller's own bond with the sensor: the key from pairing and its Bluetooth handle. Never in the
+    /// export; the host keeps it between adopts so a new loan of the same sensor needs no pairing.
+    var localState: [String: Any]? {
+        guard let sensorID, let sharedKey else {
+            return nil
+        }
+        var local: [String: Any] = ["sensorID": sensorID, "sharedKey": sharedKey]
+        local["peripheralIdentifier"] = peripheralIdentifier?.uuidString
+        return local
+    }
+
+    static func adopted(from shared: RawValue, localState: [String: Any]? = nil) -> G7CGMManagerState {
         let passed = G7CGMManagerState(rawValue: shared)
         var state = G7CGMManagerState()
         state.sensorID = passed.sensorID
@@ -347,6 +358,10 @@ extension G7CGMManagerState {
         state.configuredByAnotherController = true
         // The secondary (watch) slot, so it never takes the slot of the controller that passed it.
         state.displayType = .watch
+        if let localState, let sensorID = state.sensorID, localState["sensorID"] as? String == sensorID {
+            state.sharedKey = localState["sharedKey"] as? Data
+            state.peripheralIdentifier = (localState["peripheralIdentifier"] as? String).flatMap(UUID.init(uuidString:))
+        }
         return state
     }
 }
